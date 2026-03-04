@@ -1,0 +1,34 @@
+name: iOS Build
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Setup Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: '15.0'
+    - name: Generate Xcode project
+      run: swift package generate-xcodeproj
+    - name: Build iOS app
+      run: |
+        xcodebuild build \
+          -project EmbyPulse_iOS.xcodeproj \
+          -scheme EmbyPulse_iOS \
+          -configuration Release \
+          -destination generic/platform=iOS \
+          CODE_SIGNING_ALLOWED=NO
+    - name: Create IPA
+      run: |
+        mkdir -p Payload
+        cp -r build/Release-iphoneos/EmbyPulse_iOS.app Payload/
+        zip -r EmbyPulse_iOS.ipa Payload/
+        rm -rf Payload
+    - name: Upload IPA
+      uses: actions/upload-artifact@v4
+      with:
+        name: emby-pulse-ipa
+        path: EmbyPulse_iOS.ipa
