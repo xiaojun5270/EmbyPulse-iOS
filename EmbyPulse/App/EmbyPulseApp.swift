@@ -15,13 +15,20 @@ struct EmbyPulseApp: App {
 
 struct RootView: View {
     @EnvironmentObject private var sessionStore: SessionStore
+    @State private var showingRequestPortal = false
 
     var body: some View {
         Group {
             if sessionStore.isAuthenticated {
                 MainTabView()
+            } else if showingRequestPortal {
+                RequestPortalView {
+                    showingRequestPortal = false
+                }
             } else {
-                LoginView()
+                LoginView {
+                    showingRequestPortal = true
+                }
             }
         }
     }
@@ -35,6 +42,13 @@ struct MainTabView: View {
             }
             .tabItem {
                 Label("仪表盘", systemImage: "chart.xyaxis.line")
+            }
+
+            NavigationStack {
+                AnalyticsHubView()
+            }
+            .tabItem {
+                Label("分析", systemImage: "chart.bar.doc.horizontal")
             }
 
             NavigationStack {
@@ -52,10 +66,10 @@ struct MainTabView: View {
             }
 
             NavigationStack {
-                SettingsView()
+                AdminHubView()
             }
             .tabItem {
-                Label("设置", systemImage: "gearshape")
+                Label("管理", systemImage: "gearshape")
             }
         }
     }

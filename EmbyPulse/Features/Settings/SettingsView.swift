@@ -56,6 +56,17 @@ final class SettingsViewModel: ObservableObject {
             errorMessage = error.localizedDescription
         }
     }
+
+    func testMoviePilot() async {
+        do {
+            message = try await api.testMoviePilot(
+                url: settings.moviePilotURL,
+                token: settings.moviePilotToken
+            )
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
 }
 
 struct SettingsView: View {
@@ -125,6 +136,10 @@ struct SettingsView: View {
 
                 Button("测试 TMDB 连通性") {
                     Task { await viewModel.testTMDB() }
+                }
+
+                Button("测试 MoviePilot 连通性") {
+                    Task { await viewModel.testMoviePilot() }
                 }
 
                 Button {
