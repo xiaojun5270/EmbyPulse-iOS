@@ -56,13 +56,10 @@ final class RequestsAdminViewModel: ObservableObject {
         }
     }
 
-    func actOnRequest(_ item: AdminRequestItem, action: String, rejectReason: String? = nil) async {
+    func actOnRequest(_ items: [AdminRequestItem], action: String, rejectReason: String? = nil) async {
         do {
-            try await api.updateRequests(
-                items: [RequestActionItem(tmdbID: item.tmdbID, season: item.season)],
-                action: action,
-                rejectReason: rejectReason
-            )
+            let payload = items.map { RequestActionItem(tmdbID: $0.tmdbID, season: $0.season) }
+            try await api.updateRequests(items: payload, action: action, rejectReason: rejectReason)
             message = "操作成功"
             await refresh()
         } catch {
@@ -70,9 +67,13 @@ final class RequestsAdminViewModel: ObservableObject {
         }
     }
 
-    func actOnFeedback(_ item: AdminFeedbackItem, action: String) async {
+    func actOnFeedback(_ items: [AdminFeedbackItem], action: String) async {
         do {
-            try await api.updateFeedback(id: item.id, action: action)
+            if items.count == 1, let item = items.first {
+                try await api.updateFeedback(id: item.id, action: action)
+            } else {
+                try await api.batchFeedback(ids: items.map(\.id), action: action)
+            }
             message = "操作成功"
             await refresh()
         } catch {
@@ -83,6 +84,9 @@ final class RequestsAdminViewModel: ObservableObject {
 
 struct RequestsAdminView: View {
     @StateObject private var viewModel = RequestsAdminViewModel()
+    @State private var selectionMode = false
+    @State private var selectedRequestIDs: Set<String> = []
+    @State private var selectedFeedbackIDs: Set<Int> = []
 
     var body: some View {
         List {
@@ -93,6 +97,10 @@ struct RequestsAdminView: View {
                     }
                 }
                 .pickerStyle(.segmented)
+            }
+
+            if selectionMode {
+                batchActionSection
             }
 
             if viewModel.mode == .requests {
@@ -107,6 +115,17 @@ struct RequestsAdminView: View {
                 ProgressView("正在加载工单...")
             }
         }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(selectionMode ? "完成" : "批量") {
+                    selectionMode.toggle()
+                    if !selectionMode {
+                        selectedRequestIDs.removeAll()
+                        selectedFeedbackIDs.removeAll()
+                    }
+                }
+            }
+        }
         .task {
             await viewModel.refresh()
         }
@@ -117,6 +136,80 @@ struct RequestsAdminView: View {
             Button("确定", role: .cancel) {}
         } message: {
             Text(viewModel.errorMessage ?? viewModel.message ?? "")
+        }
+    }
+
+    private var batchActionSection: some View {
+        Section("批量操作") {
+            if viewModel.mode == .requests {
+                Text("已选择 \(selectedRequestIDs.count) 个求片工单")
+                    .foregroundStyle(.secondary)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack {
+                        Button("批量通过") {
+                            Task { await batchRequestAction("approve") }
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(selectedRequestIDs.isEmpty)
+
+                        Button("批量完成") {
+                            Task { await batchRequestAction("finish") }
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(selectedRequestIDs.isEmpty)
+
+                        Button("批量手动") {
+                            Task { await batchRequestAction("manual") }
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(selectedRequestIDs.isEmpty)
+
+                        Button("批量拒绝") {
+                            Task { await batchRequestAction("reject", reason: "未找到可用资源") }
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(selectedRequestIDs.isEmpty)
+
+                        Button("批量删除", role: .destructive) {
+                            Task { await batchRequestAction("delete") }
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(selectedRequestIDs.isEmpty)
+                    }
+                }
+            } else {
+                Text("已选择 \(selectedFeedbackIDs.count) 个反馈工单")
+                    .foregroundStyle(.secondary)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack {
+                        Button("批量修复中") {
+                            Task { await batchFeedbackAction("fix") }
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(selectedFeedbackIDs.isEmpty)
+
+                        Button("批量完成") {
+                            Task { await batchFeedbackAction("done") }
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(selectedFeedbackIDs.isEmpty)
+
+                        Button("批量忽略") {
+                            Task { await batchFeedbackAction("reject") }
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(selectedFeedbackIDs.isEmpty)
+
+                        Button("批量删除", role: .destructive) {
+                            Task { await batchFeedbackAction("delete") }
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(selectedFeedbackIDs.isEmpty)
+                    }
+                }
+            }
         }
     }
 
@@ -133,51 +226,65 @@ struct RequestsAdminView: View {
                 EmptyStateView(title: "暂无求片工单", subtitle: "当前筛选条件下没有数据。", symbol: "tray")
             } else {
                 ForEach(viewModel.filteredRequests) { item in
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(item.title)
-                            .font(.headline)
-
-                        Text(item.requestedBy ?? "未知用户")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-
-                        HStack(spacing: 10) {
-                            Text(statusTitle(for: item.status))
-                            if let year = item.year { Text(year) }
-                            Text(item.mediaType == "tv" ? "剧集" : "电影")
+                    Button {
+                        if selectionMode {
+                            toggleRequestSelection(item)
                         }
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    } label: {
+                        HStack(alignment: .top, spacing: 12) {
+                            if selectionMode {
+                                Image(systemName: selectedRequestIDs.contains(item.id) ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(selectedRequestIDs.contains(item.id) ? .blue : .secondary)
+                            }
 
-                        if let rejectReason = item.rejectReason, !rejectReason.isEmpty {
-                            Text("拒绝原因：\(rejectReason)")
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(item.title)
+                                    .font(.headline)
+
+                                Text(item.requestedBy ?? "未知用户")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+
+                                HStack(spacing: 10) {
+                                    Text(statusTitle(for: item.status))
+                                    if let year = item.year { Text(year) }
+                                    Text(item.mediaType == "tv" ? "剧集" : "电影")
+                                }
                                 .font(.caption)
-                                .foregroundStyle(.red)
+                                .foregroundStyle(.secondary)
+
+                                if let rejectReason = item.rejectReason, !rejectReason.isEmpty {
+                                    Text("拒绝原因：\(rejectReason)")
+                                        .font(.caption)
+                                        .foregroundStyle(.red)
+                                }
+                            }
                         }
+                        .padding(.vertical, 4)
                     }
-                    .padding(.vertical, 4)
+                    .buttonStyle(.plain)
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button("通过") {
-                            Task { await viewModel.actOnRequest(item, action: "approve") }
+                            Task { await viewModel.actOnRequest([item], action: "approve") }
                         }
                         .tint(.green)
 
                         Button("完成") {
-                            Task { await viewModel.actOnRequest(item, action: "finish") }
+                            Task { await viewModel.actOnRequest([item], action: "finish") }
                         }
                         .tint(.blue)
 
                         Button("拒绝") {
-                            Task { await viewModel.actOnRequest(item, action: "reject", rejectReason: "未找到可用资源") }
+                            Task { await viewModel.actOnRequest([item], action: "reject", rejectReason: "未找到可用资源") }
                         }
                         .tint(.red)
                     }
                     .contextMenu {
                         Button("手动接单") {
-                            Task { await viewModel.actOnRequest(item, action: "manual") }
+                            Task { await viewModel.actOnRequest([item], action: "manual") }
                         }
                         Button("删除") {
-                            Task { await viewModel.actOnRequest(item, action: "delete") }
+                            Task { await viewModel.actOnRequest([item], action: "delete") }
                         }
                     }
                 }
@@ -200,41 +307,55 @@ struct RequestsAdminView: View {
                 EmptyStateView(title: "暂无反馈工单", subtitle: "当前筛选条件下没有数据。", symbol: "exclamationmark.bubble")
             } else {
                 ForEach(viewModel.filteredFeedbacks) { item in
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(item.itemName)
-                            .font(.headline)
-                        Text(item.username)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        Text(item.issueType)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        if let description = item.description, !description.isEmpty {
-                            Text(description)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
+                    Button {
+                        if selectionMode {
+                            toggleFeedbackSelection(item)
                         }
+                    } label: {
+                        HStack(alignment: .top, spacing: 12) {
+                            if selectionMode {
+                                Image(systemName: selectedFeedbackIDs.contains(item.id) ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(selectedFeedbackIDs.contains(item.id) ? .blue : .secondary)
+                            }
+
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(item.itemName)
+                                    .font(.headline)
+                                Text(item.username)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                Text(item.issueType)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                if let description = item.description, !description.isEmpty {
+                                    Text(description)
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 4)
                     }
-                    .padding(.vertical, 4)
+                    .buttonStyle(.plain)
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button("修复中") {
-                            Task { await viewModel.actOnFeedback(item, action: "fix") }
+                            Task { await viewModel.actOnFeedback([item], action: "fix") }
                         }
                         .tint(.orange)
 
                         Button("完成") {
-                            Task { await viewModel.actOnFeedback(item, action: "done") }
+                            Task { await viewModel.actOnFeedback([item], action: "done") }
                         }
                         .tint(.green)
 
                         Button("忽略") {
-                            Task { await viewModel.actOnFeedback(item, action: "reject") }
+                            Task { await viewModel.actOnFeedback([item], action: "reject") }
                         }
                         .tint(.red)
                     }
                     .contextMenu {
                         Button("删除") {
-                            Task { await viewModel.actOnFeedback(item, action: "delete") }
+                            Task { await viewModel.actOnFeedback([item], action: "delete") }
                         }
                     }
                 }
@@ -242,6 +363,38 @@ struct RequestsAdminView: View {
         } header: {
             Text("资源报错")
         }
+    }
+
+    private func toggleRequestSelection(_ item: AdminRequestItem) {
+        if selectedRequestIDs.contains(item.id) {
+            selectedRequestIDs.remove(item.id)
+        } else {
+            selectedRequestIDs.insert(item.id)
+        }
+    }
+
+    private func toggleFeedbackSelection(_ item: AdminFeedbackItem) {
+        if selectedFeedbackIDs.contains(item.id) {
+            selectedFeedbackIDs.remove(item.id)
+        } else {
+            selectedFeedbackIDs.insert(item.id)
+        }
+    }
+
+    private func batchRequestAction(_ action: String, reason: String? = nil) async {
+        let items = viewModel.filteredRequests.filter { selectedRequestIDs.contains($0.id) }
+        guard !items.isEmpty else { return }
+        await viewModel.actOnRequest(items, action: action, rejectReason: reason)
+        selectedRequestIDs.removeAll()
+        selectionMode = false
+    }
+
+    private func batchFeedbackAction(_ action: String) async {
+        let items = viewModel.filteredFeedbacks.filter { selectedFeedbackIDs.contains($0.id) }
+        guard !items.isEmpty else { return }
+        await viewModel.actOnFeedback(items, action: action)
+        selectedFeedbackIDs.removeAll()
+        selectionMode = false
     }
 
     private var alertBinding: Binding<Bool> {

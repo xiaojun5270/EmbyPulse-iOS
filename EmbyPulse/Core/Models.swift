@@ -305,6 +305,35 @@ struct ManagedUser: Decodable, Identifiable, Equatable {
     }
 }
 
+struct ManagedUserDetailEnvelope: Decodable {
+    let status: String
+    let data: ManagedUserDetail?
+}
+
+struct ManagedUserDetail: Decodable, Identifiable, Equatable {
+    let id: String
+    var name: String
+    var enableAllFolders: Bool
+    var enabledFolders: [String]
+    var excludedSubFolders: [String]
+    var enableDownloading: Bool
+    var enableVideoTranscoding: Bool
+    var enableAudioTranscoding: Bool
+    var maxParentalRating: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case id = "Id"
+        case name = "Name"
+        case enableAllFolders = "EnableAllFolders"
+        case enabledFolders = "EnabledFolders"
+        case excludedSubFolders = "ExcludedSubFolders"
+        case enableDownloading = "EnableDownloading"
+        case enableVideoTranscoding = "EnableVideoTranscoding"
+        case enableAudioTranscoding = "EnableAudioTranscoding"
+        case maxParentalRating = "MaxParentalRating"
+    }
+}
+
 struct SettingsEnvelope: Decodable {
     let status: String
     let data: AppSettings
@@ -357,6 +386,57 @@ struct UserStatusUpdateRequest: Encodable {
         case userID = "user_id"
         case isDisabled = "is_disabled"
     }
+}
+
+struct UserDetailUpdateRequest: Encodable {
+    let userID: String
+    let password: String?
+    let isDisabled: Bool?
+    let expireDate: String?
+    let enableAllFolders: Bool?
+    let enabledFolders: [String]?
+    let excludedSubFolders: [String]?
+    let enableDownloading: Bool?
+    let enableVideoTranscoding: Bool?
+    let enableAudioTranscoding: Bool?
+    let maxParentalRating: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case userID = "user_id"
+        case password
+        case isDisabled = "is_disabled"
+        case expireDate = "expire_date"
+        case enableAllFolders = "enable_all_folders"
+        case enabledFolders = "enabled_folders"
+        case excludedSubFolders = "excluded_sub_folders"
+        case enableDownloading = "enable_downloading"
+        case enableVideoTranscoding = "enable_video_transcoding"
+        case enableAudioTranscoding = "enable_audio_transcoding"
+        case maxParentalRating = "max_parental_rating"
+    }
+}
+
+struct BatchUserActionRequest: Encodable {
+    let userIDs: [String]
+    let action: String
+    let value: String?
+    let copyLibrary: Bool
+    let copyPolicy: Bool
+    let copyParental: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case userIDs = "user_ids"
+        case action
+        case value
+        case copyLibrary = "copy_library"
+        case copyPolicy = "copy_policy"
+        case copyParental = "copy_parental"
+    }
+}
+
+struct InviteBatchActionRequest: Encodable {
+    let codes: [String]
+    let action: String
 }
 
 struct MoviePilotTestRequest: Encodable {

@@ -482,6 +482,17 @@ extension EmbyPulseAPI {
         return response.data
     }
 
+    func deleteInvites(codes: [String]) async throws {
+        let response: StatusMessageResponse = try await request(
+            path: "/api/manage/invites/batch",
+            method: .post,
+            body: InviteBatchActionRequest(codes: codes, action: "delete")
+        )
+        guard response.status == "success" else {
+            throw APIError.server(response.message ?? "删除邀请码失败")
+        }
+    }
+
     func generateInvites(days: Int, count: Int) async throws -> [String] {
         let response: InviteGenerateResponse = try await request(
             path: "/api/manage/invite/gen",
@@ -510,6 +521,43 @@ extension EmbyPulseAPI {
         )
         guard response.status == "success" else {
             throw APIError.server(response.message ?? "创建用户失败")
+        }
+    }
+
+    func fetchUserDetail(userID: String) async throws -> ManagedUserDetail {
+        let response: ManagedUserDetailEnvelope = try await request(path: "/api/manage/user/\(userID)")
+        guard response.status == "success", let detail = response.data else {
+            throw APIError.server("获取用户详情失败")
+        }
+        return detail
+    }
+
+    func updateUserDetail(_ requestBody: UserDetailUpdateRequest) async throws {
+        let response: StatusMessageResponse = try await request(
+            path: "/api/manage/user/update",
+            method: .post,
+            body: requestBody
+        )
+        guard response.status == "success" else {
+            throw APIError.server(response.message ?? "更新用户失败")
+        }
+    }
+
+    func batchUpdateUsers(userIDs: [String], action: String, value: String? = nil) async throws {
+        let response: StatusMessageResponse = try await request(
+            path: "/api/manage/users/batch",
+            method: .post,
+            body: BatchUserActionRequest(
+                userIDs: userIDs,
+                action: action,
+                value: value,
+                copyLibrary: false,
+                copyPolicy: false,
+                copyParental: false
+            )
+        )
+        guard response.status == "success" else {
+            throw APIError.server(response.message ?? "批量操作用户失败")
         }
     }
 
