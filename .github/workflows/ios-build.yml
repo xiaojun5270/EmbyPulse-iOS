@@ -11,20 +11,23 @@ jobs:
       uses: maxim-lobanov/setup-xcode@v1
       with:
         xcode-version: '15.0'
+    - name: Install XcodeGen
+      run: brew install xcodegen
     - name: Generate Xcode project
-      run: swift package generate-xcodeproj
+      run: xcodegen generate
     - name: Build iOS app
       run: |
         xcodebuild build \
-          -project EmbyPulse_iOS.xcodeproj \
-          -scheme EmbyPulse_iOS \
+          -project EmbyPulse.xcodeproj \
+          -scheme EmbyPulse \
           -configuration Release \
           -destination generic/platform=iOS \
+          -derivedDataPath build \
           CODE_SIGNING_ALLOWED=NO
     - name: Create IPA
       run: |
         mkdir -p Payload
-        cp -r build/Release-iphoneos/EmbyPulse_iOS.app Payload/
+        cp -r build/Build/Products/Release-iphoneos/EmbyPulse.app Payload/
         zip -r EmbyPulse_iOS.ipa Payload/
         rm -rf Payload
     - name: Upload IPA

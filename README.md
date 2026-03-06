@@ -1,2 +1,102 @@
-# EmbyPulse-iOS
-test
+# EmbyPulse iOS
+
+一个基于 [zeyu8023/emby-pulse](https://github.com/zeyu8023/emby-pulse) 文档和实际后端接口实现的 SwiftUI iOS 客户端。
+
+## 已实现能力
+
+- EmbyPulse 面板登录
+  - 使用面板地址 + Emby 管理员账号密码
+  - 通过服务端 Session Cookie 保持登录状态
+- 仪表盘
+  - 总播放次数、活跃用户、累计时长、媒体总量
+  - 播放趋势图
+  - 实时播放会话
+  - 最近入库与最近活动
+- 追剧日历
+  - 调用 `/api/calendar/weekly`
+  - 支持查看上周 / 本周 / 下周
+  - 支持修改缓存 TTL
+  - 已入库剧集可跳转 Emby Web
+- 用户管理
+  - 查看用户列表、管理员标记、禁用状态、到期时间、最近登录
+  - 快速启用 / 禁用账号
+- 系统设置
+  - 读取 / 保存 Emby、TMDB、Webhook、MoviePilot 等配置
+  - 测试 TMDB 连通性
+
+## 工程结构
+
+```text
+EmbyPulse/
+  App/
+  Core/
+  Features/
+    Auth/
+    Dashboard/
+    Calendar/
+    Users/
+    Settings/
+  Shared/
+project.yml
+```
+
+## 使用方式
+
+### 1. 生成 Xcode 工程
+
+本仓库使用 **XcodeGen** 生成工程文件。
+
+```bash
+brew install xcodegen
+xcodegen generate
+open EmbyPulse.xcodeproj
+```
+
+### 2. 运行要求
+
+- Xcode 15+
+- iOS 16+
+- 已部署 EmbyPulse 面板
+- 若要使用追剧日历，请先在面板中配置 `TMDB API Key`
+
+### 3. 登录说明
+
+根据 EmbyPulse 文档，默认直接使用 **Emby 管理员账号** 登录面板。
+
+面板默认部署端口通常为：
+
+```text
+http://你的服务器IP:10307
+```
+
+## 对接的主要后端接口
+
+- `POST /api/login`
+- `GET /api/stats/dashboard`
+- `GET /api/stats/trend`
+- `GET /api/stats/live`
+- `GET /api/stats/recent`
+- `GET /api/stats/latest`
+- `GET /api/calendar/weekly`
+- `POST /api/calendar/config`
+- `GET /api/manage/users`
+- `POST /api/manage/user/update`
+- `GET /api/settings`
+- `POST /api/settings`
+- `POST /api/settings/test_tmdb`
+
+## CI
+
+仓库内已更新 GitHub Actions：
+
+- 自动安装 XcodeGen
+- 生成 `EmbyPulse.xcodeproj`
+- 执行 iOS Release 构建
+- 打包 IPA 制品
+
+## 后续可继续扩展
+
+- 内容排行 / 用户画像 / 报表生成
+- 邀请码管理与新建用户
+- Telegram Bot 管理
+- 更多 Emby 深链与媒体详情页
