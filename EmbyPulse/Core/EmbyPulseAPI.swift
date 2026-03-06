@@ -32,6 +32,7 @@ enum APIError: LocalizedError {
 enum HTTPVerb: String {
     case get = "GET"
     case post = "POST"
+    case delete = "DELETE"
 }
 
 final class EmbyPulseAPI {
@@ -82,13 +83,8 @@ final class EmbyPulseAPI {
         baseURL?.absoluteString ?? ""
     }
 
-    func absoluteURL(path: String) -> URL? {
-        guard let baseURL else { return nil }
-
-        var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
-        let suffix = path.hasPrefix("/") ? String(path.dropFirst()) : path
-        components?.path = baseURL.path + "/" + suffix
-        return components?.url
+    func absoluteURL(path: String, query: [URLQueryItem] = []) -> URL? {
+        buildURL(path: path, query: query)
     }
 
     func clearSession() {
@@ -244,7 +240,7 @@ final class EmbyPulseAPI {
         return response.message ?? "TMDB 连通成功"
     }
 
-    private func request<T: Decodable>(
+    func request<T: Decodable>(
         path: String,
         method: HTTPVerb = .get,
         query: [URLQueryItem] = [],
@@ -258,7 +254,7 @@ final class EmbyPulseAPI {
         request.httpMethod = method.rawValue
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
-        if method != .get {
+        if method == .post {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try encoder.encode(body)
         }
@@ -291,7 +287,7 @@ final class EmbyPulseAPI {
         }
     }
 
-    private func buildURL(path: String, query: [URLQueryItem]) -> URL? {
+    func buildURL(path: String, query: [URLQueryItem]) -> URL? {
         guard let baseURL else {
             return nil
         }
@@ -317,4 +313,4 @@ final class EmbyPulseAPI {
     }
 }
 
-private struct EmptyRequest: Encodable {}
+struct EmptyRequest: Encodable {}

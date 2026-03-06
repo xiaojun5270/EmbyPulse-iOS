@@ -3,9 +3,11 @@ import SwiftUI
 @MainActor
 final class UsersViewModel: ObservableObject {
     @Published var users: [ManagedUser] = []
+    @Published var invites: [InviteCode] = []
     @Published var searchText = ""
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var message: String?
 
     private let api: EmbyPulseAPI
 
@@ -29,8 +31,11 @@ final class UsersViewModel: ObservableObject {
         defer { isLoading = false }
 
         do {
-            users = try await api.fetchUsers()
+            async let usersTask = api.fetchUsers()
+            async let invitesTask = api.fetchInvites()
+            users = try await usersTask
                 .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            invites = try await invitesTask
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -44,11 +49,43 @@ final class UsersViewModel: ObservableObject {
             errorMessage = error.localizedDescription
         }
     }
+
+    func createUser(name: String, password: String, expireDate: String?) async {
+        do {
+            try await api.createUser(name: name, password: password, expireDate: expireDate)
+            message = "用户已创建"
+            await refresh()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func delete(_ user: ManagedUser) async {
+        do {
+            try await api.deleteUser(userID: user.id)
+            message = "用户已删除"
+            await refresh()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func generateInvites(days: Int, count: Int) async {
+        do {
+            let codes = try await api.generateInvites(days: days, count: count)
+            message = "已生成邀请码：\(codes.joined(separator: ", "))"
+            await refresh()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
 }
 
 struct UsersView: View {
     @StateObject private var viewModel = UsersViewModel()
     @EnvironmentObject private var sessionStore: SessionStore
+    @State private var showingCreateUser = false
+    @State private var showingInvites = false
 
     var body: some View {
         List {
@@ -115,6 +152,10 @@ struct UsersView: View {
                             Task { await viewModel.toggle(user) }
                         }
                         .tint(user.isDisabled ? .green : .red)
+
+                        Button("删除", role: .destructive) {
+                            Task { await viewModel.delete(user) }
+                        }
                     }
                 }
             }
@@ -127,6 +168,18 @@ struct UsersView: View {
         .navigationTitle("用户管理")
         .searchable(text: $viewModel.searchText, prompt: "搜索用户名或 User ID")
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Menu {
+                    Button("新建用户") {
+                        showingCreateUser = true
+                    }
+                    Button("邀请码") {
+                        showingInvites = true
+                    }
+                } label: {
+                    Image(systemName: "plus.circle")
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     Task { await viewModel.refresh() }
@@ -143,17 +196,16 @@ struct UsersView: View {
         .refreshable {
             await viewModel.refresh()
         }
-        .alert("操作失败", isPresented: Binding(
-            get: { viewModel.errorMessage != nil },
-            set: { newValue in
-                if !newValue {
-                    viewModel.errorMessage = nil
-                }
-            }
-        )) {
+        .sheet(isPresented: $showingCreateUser) {
+            NewUserSheet(viewModel: viewModel)
+        }
+        .sheet(isPresented: $showingInvites) {
+            InviteManagementSheet(viewModel: viewModel)
+        }
+        .alert(alertTitle, isPresented: alertBinding) {
             Button("确定", role: .cancel) {}
         } message: {
-            Text(viewModel.errorMessage ?? "")
+            Text(viewModel.errorMessage ?? viewModel.message ?? "")
         }
     }
 
@@ -183,6 +235,111 @@ struct UsersView: View {
                 .scaledToFit()
                 .frame(width: 52, height: 52)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    private var alertBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.errorMessage != nil || viewModel.message != nil },
+            set: { newValue in
+                if !newValue {
+                    viewModel.errorMessage = nil
+                    viewModel.message = nil
+                }
+            }
+        )
+    }
+
+    private var alertTitle: String {
+        viewModel.errorMessage == nil ? "操作提示" : "操作失败"
+    }
+}
+
+private struct NewUserSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var viewModel: UsersViewModel
+    @State private var name = ""
+    @State private var password = ""
+    @State private var expireDate = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                TextField("用户名", text: $name)
+                SecureField("密码（可选）", text: $password)
+                TextField("到期日 YYYY-MM-DD（可选）", text: $expireDate)
+                    .textInputAutocapitalization(.never)
+            }
+            .navigationTitle("新建用户")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("创建") {
+                        Task {
+                            await viewModel.createUser(name: name, password: password, expireDate: expireDate)
+                            dismiss()
+                        }
+                    }
+                    .disabled(name.isEmpty)
+                }
+            }
+        }
+    }
+}
+
+private struct InviteManagementSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var viewModel: UsersViewModel
+    @State private var days = 30
+    @State private var count = 1
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("生成邀请码") {
+                    Stepper("有效期 \(days) 天", value: $days, in: 1 ... 365)
+                    Stepper("数量 \(count)", value: $count, in: 1 ... 20)
+
+                    Button("生成") {
+                        Task { await viewModel.generateInvites(days: days, count: count) }
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+
+                Section("现有邀请码") {
+                    if viewModel.invites.isEmpty {
+                        Text("暂无邀请码")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(viewModel.invites) { invite in
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(invite.code)
+                                    .font(.headline.monospaced())
+                                HStack(spacing: 10) {
+                                    if let days = invite.days { Text("\(days) 天") }
+                                    if let usedCount = invite.usedCount { Text("已用 \(usedCount)") }
+                                    if let maxUses = invite.maxUses { Text("上限 \(maxUses)") }
+                                }
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                if let usedBy = invite.usedBy, !usedBy.isEmpty {
+                                    Text("使用者：\(usedBy)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("邀请码")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("关闭") { dismiss() }
+                }
+            }
         }
     }
 }

@@ -38,6 +38,13 @@ struct MainTabView: View {
             }
 
             NavigationStack {
+                AnalyticsHubView()
+            }
+            .tabItem {
+                Label("分析", systemImage: "chart.bar.doc.horizontal")
+            }
+
+            NavigationStack {
                 CalendarView()
             }
             .tabItem {
@@ -52,10 +59,10 @@ struct MainTabView: View {
             }
 
             NavigationStack {
-                SettingsView()
+                AdminHubView()
             }
             .tabItem {
-                Label("设置", systemImage: "gearshape")
+                Label("管理", systemImage: "gearshape")
             }
         }
     }
