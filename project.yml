@@ -3,7 +3,6 @@ options:
   bundleIdPrefix: com.embypulse
 settings:
   base:
-    SWIFT_VERSION: 5.9
     IPHONEOS_DEPLOYMENT_TARGET: 16.0
 targets:
   EmbyPulse:
