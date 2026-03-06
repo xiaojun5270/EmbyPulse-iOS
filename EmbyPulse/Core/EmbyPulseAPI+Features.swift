@@ -1,6 +1,117 @@
 import Foundation
 
 extension EmbyPulseAPI {
+    func requestCheckAuth() async throws -> RequestUser? {
+        let response: RequestAuthCheckEnvelope = try await request(path: "/api/requests/check")
+        guard response.status == "success" else { return nil }
+        return response.user
+    }
+
+    func requestLogin(username: String, password: String) async throws {
+        let response: StatusMessageResponse = try await request(
+            path: "/api/requests/auth",
+            method: .post,
+            body: RequestAuthRequest(username: username, password: password)
+        )
+        guard response.status == "success" else {
+            throw APIError.server(response.message ?? "求片登录失败")
+        }
+    }
+
+    func requestLogout() async throws {
+        let response: StatusMessageResponse = try await request(
+            path: "/api/requests/logout",
+            method: .post,
+            body: EmptyRequest()
+        )
+        guard response.status == "success" else {
+            throw APIError.server(response.message ?? "退出求片登录失败")
+        }
+    }
+
+    func fetchRequestTrending() async throws -> RequestTrendingData {
+        let response: RequestTrendingEnvelope = try await request(path: "/api/requests/trending")
+        guard response.status == "success" else {
+            throw APIError.server(response.message ?? "获取热门推荐失败")
+        }
+        return response.data
+    }
+
+    func searchRequestMedia(query: String) async throws -> [RequestMediaItem] {
+        let response: RequestMediaSearchEnvelope = try await request(
+            path: "/api/requests/search",
+            query: [URLQueryItem(name: "query", value: query)]
+        )
+        guard response.status == "success" else {
+            throw APIError.server(response.message ?? "搜索求片资源失败")
+        }
+        return response.data
+    }
+
+    func fetchRequestTVDetails(tmdbID: Int) async throws -> [RequestSeason] {
+        let response: RequestTVDetailsEnvelope = try await request(path: "/api/requests/tv/\(tmdbID)")
+        guard response.status == "success" else {
+            throw APIError.server(response.message ?? "获取剧集季信息失败")
+        }
+        return response.seasons
+    }
+
+    func checkRequestLocalStatus(mediaType: String, tmdbID: Int) async throws -> Bool {
+        let response: RequestLocalCheckEnvelope = try await request(path: "/api/requests/check/\(mediaType)/\(tmdbID)")
+        guard response.status == "success" else {
+            throw APIError.server("检查本地状态失败")
+        }
+        return response.exists
+    }
+
+    func submitRequest(_ item: RequestMediaItem, seasons: [Int]) async throws -> String {
+        let response: StatusMessageResponse = try await request(
+            path: "/api/requests/submit",
+            method: .post,
+            body: RequestSubmitRequest(
+                tmdbID: item.tmdbID,
+                mediaType: item.mediaType,
+                title: item.title,
+                year: item.year,
+                posterPath: item.posterPath,
+                overview: item.overview,
+                seasons: seasons
+            )
+        )
+        guard response.status == "success" else {
+            throw APIError.server(response.message ?? "提交求片失败")
+        }
+        return response.message ?? "提交成功"
+    }
+
+    func fetchMyRequests() async throws -> [UserRequestItem] {
+        let response: UserRequestsEnvelope = try await request(path: "/api/requests/my")
+        guard response.status == "success" else {
+            throw APIError.server(response.message ?? "获取我的求片失败")
+        }
+        return response.data
+    }
+
+    func submitFeedback(itemName: String, issueType: String, description: String, posterPath: String) async throws -> String {
+        let response: StatusMessageResponse = try await request(
+            path: "/api/requests/feedback/submit",
+            method: .post,
+            body: FeedbackSubmitRequest(itemName: itemName, issueType: issueType, description: description, posterPath: posterPath)
+        )
+        guard response.status == "success" else {
+            throw APIError.server(response.message ?? "提交反馈失败")
+        }
+        return response.message ?? "提交成功"
+    }
+
+    func fetchMyFeedback() async throws -> [UserFeedbackItem] {
+        let response: UserFeedbackEnvelope = try await request(path: "/api/requests/feedback/my")
+        guard response.status == "success" else {
+            throw APIError.server(response.message ?? "获取我的反馈失败")
+        }
+        return response.data
+    }
+
     func fetchTopMovies(
         userID: String? = nil,
         category: ContentCategory = .all,

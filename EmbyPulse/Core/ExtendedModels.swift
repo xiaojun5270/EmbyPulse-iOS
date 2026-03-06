@@ -893,3 +893,191 @@ enum JSONValue: Decodable {
         }
     }
 }
+
+struct RequestAuthCheckEnvelope: Decodable {
+    let status: String
+    let user: RequestUser?
+    let message: String?
+}
+
+struct RequestUser: Decodable, Equatable {
+    let id: String
+    let name: String
+
+    enum CodingKeys: String, CodingKey {
+        case id = "Id"
+        case name = "Name"
+    }
+}
+
+struct RequestAuthRequest: Encodable {
+    let username: String
+    let password: String
+}
+
+struct RequestTrendingEnvelope: Decodable {
+    let status: String
+    let data: RequestTrendingData
+    let message: String?
+}
+
+struct RequestTrendingData: Decodable {
+    let movies: [RequestMediaItem]
+    let tv: [RequestMediaItem]
+    let topMovies: [RequestMediaItem]
+    let topTV: [RequestMediaItem]
+
+    enum CodingKeys: String, CodingKey {
+        case movies
+        case tv
+        case topMovies = "top_movies"
+        case topTV = "top_tv"
+    }
+}
+
+struct RequestMediaSearchEnvelope: Decodable {
+    let status: String
+    let data: [RequestMediaItem]
+    let message: String?
+}
+
+struct RequestMediaItem: Decodable, Identifiable, Equatable {
+    let tmdbID: Int
+    let mediaType: String
+    let title: String
+    let year: String?
+    let posterPath: String?
+    let backdropPath: String?
+    let overview: String?
+    let voteAverage: Double?
+    var localStatus: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case tmdbID = "tmdb_id"
+        case mediaType = "media_type"
+        case title
+        case year
+        case posterPath = "poster_path"
+        case backdropPath = "backdrop_path"
+        case overview
+        case voteAverage = "vote_average"
+        case localStatus = "local_status"
+    }
+
+    var id: Int { tmdbID }
+}
+
+struct RequestTVDetailsEnvelope: Decodable {
+    let status: String
+    let seasons: [RequestSeason]
+    let message: String?
+}
+
+struct RequestSeason: Decodable, Identifiable, Equatable {
+    let seasonNumber: Int
+    let name: String
+    let episodeCount: Int
+    let existsLocally: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case seasonNumber = "season_number"
+        case name
+        case episodeCount = "episode_count"
+        case existsLocally = "exists_locally"
+    }
+
+    var id: Int { seasonNumber }
+}
+
+struct RequestLocalCheckEnvelope: Decodable {
+    let status: String
+    let exists: Bool
+}
+
+struct RequestSubmitRequest: Encodable {
+    let tmdbID: Int
+    let mediaType: String
+    let title: String
+    let year: String?
+    let posterPath: String?
+    let overview: String?
+    let seasons: [Int]
+
+    enum CodingKeys: String, CodingKey {
+        case tmdbID = "tmdb_id"
+        case mediaType = "media_type"
+        case title
+        case year
+        case posterPath = "poster_path"
+        case overview
+        case seasons
+    }
+}
+
+struct UserRequestsEnvelope: Decodable {
+    let status: String
+    let data: [UserRequestItem]
+    let message: String?
+}
+
+struct UserRequestItem: Decodable, Identifiable {
+    let tmdbID: Int
+    let title: String
+    let year: String?
+    let posterPath: String?
+    let status: Int
+    let season: Int
+    let requestedAt: String?
+    let rejectReason: String?
+
+    enum CodingKeys: String, CodingKey {
+        case tmdbID = "tmdb_id"
+        case title
+        case year
+        case posterPath = "poster_path"
+        case status
+        case season
+        case requestedAt = "requested_at"
+        case rejectReason = "reject_reason"
+    }
+
+    var id: String { "\(tmdbID)-\(season)" }
+}
+
+struct FeedbackSubmitRequest: Encodable {
+    let itemName: String
+    let issueType: String
+    let description: String
+    let posterPath: String
+
+    enum CodingKeys: String, CodingKey {
+        case itemName = "item_name"
+        case issueType = "issue_type"
+        case description
+        case posterPath = "poster_path"
+    }
+}
+
+struct UserFeedbackEnvelope: Decodable {
+    let status: String
+    let data: [UserFeedbackItem]
+    let message: String?
+}
+
+struct UserFeedbackItem: Decodable, Identifiable {
+    let id: Int
+    let itemName: String
+    let issueType: String
+    let description: String?
+    let status: Int
+    let createdAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case itemName = "item_name"
+        case issueType = "issue_type"
+        case description
+        case status
+        case createdAt = "created_at"
+    }
+}

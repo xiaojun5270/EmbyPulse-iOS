@@ -15,13 +15,20 @@ struct EmbyPulseApp: App {
 
 struct RootView: View {
     @EnvironmentObject private var sessionStore: SessionStore
+    @State private var showingRequestPortal = false
 
     var body: some View {
         Group {
             if sessionStore.isAuthenticated {
                 MainTabView()
+            } else if showingRequestPortal {
+                RequestPortalView {
+                    showingRequestPortal = false
+                }
             } else {
-                LoginView()
+                LoginView {
+                    showingRequestPortal = true
+                }
             }
         }
     }

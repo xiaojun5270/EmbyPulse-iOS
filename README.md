@@ -7,6 +7,7 @@
 - EmbyPulse 面板登录
   - 使用面板地址 + Emby 管理员账号密码
   - 通过服务端 Session Cookie 保持登录状态
+  - 登录页可切换进入独立的求片广场模式
 - 仪表盘
   - 总播放次数、活跃用户、累计时长、媒体总量
   - 播放趋势图
@@ -37,6 +38,14 @@
   - 系统设置
     - 读取 / 保存 Emby、TMDB、Webhook、MoviePilot 等配置
     - 测试 TMDB 连通性
+    - 测试 MoviePilot 连通性
+- 求片广场（用户侧）
+  - Emby 用户登录
+  - 热门推荐与高分榜
+  - TMDB 搜索
+  - 电影 / 剧集求片提交
+  - 我的求片与报错记录
+  - 个人画像与勋章
 
 ## 工程结构
 
@@ -88,6 +97,17 @@ http://你的服务器IP:10307
 ## 对接的主要后端接口
 
 - `POST /api/login`
+- `POST /api/requests/auth`
+- `GET /api/requests/check`
+- `POST /api/requests/logout`
+- `GET /api/requests/trending`
+- `GET /api/requests/search`
+- `GET /api/requests/tv/{tmdb_id}`
+- `GET /api/requests/check/{media_type}/{tmdb_id}`
+- `POST /api/requests/submit`
+- `GET /api/requests/my`
+- `POST /api/requests/feedback/submit`
+- `GET /api/requests/feedback/my`
 - `GET /api/stats/dashboard`
 - `GET /api/stats/trend`
 - `GET /api/stats/top_movies`
@@ -135,6 +155,7 @@ http://你的服务器IP:10307
 - `GET /api/settings`
 - `POST /api/settings`
 - `POST /api/settings/test_tmdb`
+- `POST /api/settings/test_mp`
 
 ## CI
 
@@ -148,6 +169,7 @@ http://你的服务器IP:10307
 ## 当前导航结构
 
 - 仪表盘
+- 求片广场（独立入口）
 - 数据分析
   - 内容排行
   - 历史记录

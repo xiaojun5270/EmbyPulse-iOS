@@ -240,6 +240,20 @@ final class EmbyPulseAPI {
         return response.message ?? "TMDB 连通成功"
     }
 
+    func testMoviePilot(url: String, token: String) async throws -> String {
+        let response: StatusMessageResponse = try await request(
+            path: "/api/settings/test_mp",
+            method: .post,
+            body: MoviePilotTestRequest(mpURL: url, mpToken: token)
+        )
+
+        guard response.status == "success" else {
+            throw APIError.server(response.message ?? "MoviePilot 测试失败")
+        }
+
+        return response.message ?? "MoviePilot 连通成功"
+    }
+
     func request<T: Decodable>(
         path: String,
         method: HTTPVerb = .get,

@@ -2,10 +2,15 @@ import SwiftUI
 
 struct LoginView: View {
     @EnvironmentObject private var sessionStore: SessionStore
+    let onOpenRequestPortal: (() -> Void)?
 
     @State private var serverURL = ""
     @State private var username = ""
     @State private var password = ""
+
+    init(onOpenRequestPortal: (() -> Void)? = nil) {
+        self.onOpenRequestPortal = onOpenRequestPortal
+    }
 
     var body: some View {
         NavigationStack {
@@ -133,6 +138,20 @@ struct LoginView: View {
             }
             .font(.footnote)
             .foregroundStyle(.secondary)
+
+            if let onOpenRequestPortal {
+                Divider()
+                Button {
+                    onOpenRequestPortal()
+                } label: {
+                    HStack {
+                        Spacer()
+                        Label("进入求片广场", systemImage: "sparkles")
+                        Spacer()
+                    }
+                }
+                .buttonStyle(.bordered)
+            }
         }
         .padding(22)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24))

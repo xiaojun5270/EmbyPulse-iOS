@@ -5,6 +5,17 @@ struct AdminHubView: View {
         List {
             Section("运营与审批") {
                 NavigationLink {
+                    RequestPortalView()
+                } label: {
+                    AdminHubRow(
+                        title: "求片前台",
+                        subtitle: "以普通 Emby 用户视角体验求片、反馈与个人画像",
+                        symbol: "sparkles.rectangle.stack",
+                        tint: .pink
+                    )
+                }
+
+                NavigationLink {
                     RequestsAdminView()
                 } label: {
                     AdminHubRow(

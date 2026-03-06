@@ -359,6 +359,16 @@ struct UserStatusUpdateRequest: Encodable {
     }
 }
 
+struct MoviePilotTestRequest: Encodable {
+    let mpURL: String
+    let mpToken: String
+
+    enum CodingKeys: String, CodingKey {
+        case mpURL = "mp_url"
+        case mpToken = "mp_token"
+    }
+}
+
 enum TrendDimension: String, CaseIterable, Identifiable {
     case day
     case week
