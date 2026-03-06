@@ -123,7 +123,7 @@ struct HistoryBrowserView: View {
                 }
             }
 
-            if let pagination {
+            if let pagination = viewModel.pagination {
                 Section("分页") {
                     HStack {
                         Button("上一页") {

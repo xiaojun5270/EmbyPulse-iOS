@@ -113,10 +113,10 @@ struct UserInsightView: View {
     private var badgesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHeaderView(title: "趣味勋章", subtitle: "根据观看习惯生成的标签")
-            if badges.isEmpty {
+            if viewModel.badges.isEmpty {
                 EmptyStateView(title: "暂无勋章", subtitle: "再多看片一阵子就会触发更丰富的成就。", symbol: "medal")
             } else {
-                ForEach(badges) { badge in
+                ForEach(viewModel.badges) { badge in
                     VStack(alignment: .leading, spacing: 6) {
                         Text(badge.name)
                             .font(.headline)

@@ -36,6 +36,7 @@ enum HTTPVerb: String {
 }
 
 final class EmbyPulseAPI {
+    @MainActor
     static let shared = EmbyPulseAPI()
 
     private let session: URLSession
@@ -326,5 +327,7 @@ final class EmbyPulseAPI {
         return .server("请求失败 (\(statusCode))")
     }
 }
+
+extension EmbyPulseAPI: @unchecked Sendable {}
 
 struct EmptyRequest: Encodable {}

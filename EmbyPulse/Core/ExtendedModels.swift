@@ -649,7 +649,7 @@ struct LibrarySearchResult: Decodable, Identifiable {
 }
 
 struct LibraryBadge: Decodable, Identifiable {
-    let id = UUID()
+    var id = UUID()
     let type: String
     let text: String
     let color: String?

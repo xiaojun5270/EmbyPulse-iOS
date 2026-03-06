@@ -19,6 +19,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.embypulse.app
         PRODUCT_NAME: EmbyPulse
         GENERATE_INFOPLIST_FILE: YES
+        OTHER_LDFLAGS: -framework Charts
         INFOPLIST_KEY_CFBundleDisplayName: EmbyPulse
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.entertainment
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES

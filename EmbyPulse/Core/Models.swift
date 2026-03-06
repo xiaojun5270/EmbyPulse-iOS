@@ -510,10 +510,10 @@ extension KeyedDecodingContainer {
             return stringValue
         }
         if let intValue = try? decodeIfPresent(Int.self, forKey: key) {
-            return intValue.map(String.init)
+            return intValue?.map(String.init)
         }
         if let doubleValue = try? decodeIfPresent(Double.self, forKey: key) {
-            return doubleValue.map { String(Int($0)) }
+            return doubleValue?.map { String(Int($0)) }
         }
         return nil
     }
