@@ -12,6 +12,8 @@ targets:
     deploymentTarget: "16.0"
     sources:
       - EmbyPulse
+    dependencies:
+      - framework: Charts.framework
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.embypulse.app
