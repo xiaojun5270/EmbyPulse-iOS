@@ -17,13 +17,14 @@ jobs:
       run: xcodegen generate
     - name: Build iOS app
       run: |
-        xcodebuild build \
+        xcodebuild clean build \
           -project EmbyPulse.xcodeproj \
           -scheme EmbyPulse \
           -configuration Release \
           -destination generic/platform=iOS \
           -derivedDataPath build \
-          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGNING_ALLOWED=NO \
+          -verbose
     - name: Create IPA
       run: |
         mkdir -p Payload
