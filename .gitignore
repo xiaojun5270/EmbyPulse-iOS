@@ -1,0 +1,7 @@
+build/
+DerivedData/
+EmbyPulse.xcodeproj/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+.DS_Store
